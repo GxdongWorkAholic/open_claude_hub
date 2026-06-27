@@ -1,0 +1,13 @@
+{
+    "headroom": {
+        "host": "127.0.0.1",
+        "port": 8787,
+        "upstream": "http://127.0.0.1:15721"
+    },
+    "projects": [
+        {
+            "name": "example_project",
+            "path": "D:\\path\\to\\your\\project"
+        }
+    ]
+}

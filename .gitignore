@@ -1,0 +1,6 @@
+# Config with real data — never commit
+claude_config.json
+
+# Bytecode
+__pycache__/
+*.pyc
