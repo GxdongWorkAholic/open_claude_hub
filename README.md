@@ -64,27 +64,28 @@ ANTHROPIC_BASE_URL  headroom.host+port   headroom.upstream
 
 ### 🔧 Using plain Python instead of uv
 
-The default launchers use `uv run python`. If you prefer plain Python, just edit the last line:
+The default launchers use `uv run python`. If you prefer plain Python, edit the launcher files:
 
-**claude_launcher.bat** — change:
-```bat
-powershell -WindowStyle Hidden -Command "Set-Location '%~dp0'; uv run python claude_launcher.py"
-```
-to:
-```bat
-powershell -WindowStyle Hidden -Command "Set-Location '%~dp0'; python claude_launcher.py"
-```
-
-**claude_launcher.vbs** — change:
-```vbs
-WshShell.Run "uv run python claude_launcher.py", 0, False
-```
-to:
-```vbs
-WshShell.Run "pythonw claude_launcher.py", 0, False
-```
+| Launcher | Default | Plain Python |
+|----------|---------|---------------|
+| `.bat` | `uv run python claude_launcher.py` | `python claude_launcher.py` |
+| `.vbs` | `uv run python claude_launcher.py` | `pythonw claude_launcher.py` |
+| `.sh` | `uv run python claude_launcher.py` | `python3 claude_launcher.py` |
 
 ## 🖥️ Usage
+
+Just double-click the launcher:
+
+| File | Platform | Notes |
+|------|----------|-------|
+| `claude_launcher.vbs` | Windows | 🏆 **Recommended** — silent launch, no console window |
+| `claude_launcher.bat` | Windows | Launches via PowerShell (hidden window) |
+| `claude_launcher.sh` | macOS / Linux | `chmod +x claude_launcher.sh` then `./claude_launcher.sh` |
+
+Or from the terminal:
+```
+uv run python claude_launcher.py
+```
 
 ### 📑 Tabs
 
@@ -114,8 +115,9 @@ WshShell.Run "pythonw claude_launcher.py", 0, False
 | `claude_config.json` | Your config (real data) | ❌ |
 | `claude_config.template.json` | Config template (placeholders) | ✅ |
 | `claude_launcher.py` | Main application | ✅ |
+| `claude_launcher.vbs` | Windows silent launcher **(recommended)** | ✅ |
 | `claude_launcher.bat` | Windows batch launcher | ✅ |
-| `claude_launcher.vbs` | Windows silent launcher (no console) | ✅ |
+| `claude_launcher.sh` | macOS / Linux shell launcher | ✅ |
 | `.gitignore` | Ignores real config and bytecode | ✅ |
 
 ## 🔄 How It Works
