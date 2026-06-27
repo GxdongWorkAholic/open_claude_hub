@@ -58,7 +58,7 @@ STATS_REFRESH_MS = 5000  # Poll /stats every 5 seconds
 class ClaudeLauncher:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("Claude Launcher")
+        self.root.title("Open Claude Hub")
         self.root.geometry("640x910")
         self.root.resizable(True, True)
         self.root.minsize(500, 400)
@@ -150,7 +150,7 @@ class ClaudeLauncher:
         header_inner.pack(fill="x", padx=24, pady=(16, 10))
 
         tk.Label(
-            header_inner, text="Claude Launcher",
+            header_inner, text="Open Claude Hub",
             font=FONTS["title"], bg=COLORS["primary"], fg="#ffffff",
         ).pack(side="left")
 
