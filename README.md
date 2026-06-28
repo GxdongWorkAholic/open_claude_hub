@@ -34,6 +34,8 @@ ANTHROPIC_BASE_URL  headroom.host+port   headroom.upstream
 2. Edit `claude_config.json`:
    ```json
    {
+       "launcher": "windows_terminal",
+       "launcher_options": ["windows_terminal", "cmd"],
        "headroom": {
            "host": "127.0.0.1",
            "port": 8787,
@@ -50,6 +52,8 @@ ANTHROPIC_BASE_URL  headroom.host+port   headroom.upstream
 
    | Field | Description |
    |-------|-------------|
+   | `launcher` | Default terminal: `windows_terminal` (multi-tab) or `cmd` (separate windows) |
+   | `launcher_options` | Available terminal options in the dropdown (currently hidden, config-driven) |
    | `headroom.host` | Headroom proxy bind address |
    | `headroom.port` | Headroom proxy listen port |
    | `headroom.upstream` | Upstream API URL (ccswitch or direct Anthropic endpoint) |
@@ -115,6 +119,7 @@ uv run python claude_launcher.py
 | `claude_config.json` | Your config (real data) | ❌ |
 | `claude_config.template.json` | Config template (placeholders) | ✅ |
 | `claude_launcher.py` | Main application | ✅ |
+| `claude_start_overwrite_setting.json` | Runtime settings (auto-generated at launch) | ✅ |
 | `claude_launcher.vbs` | Windows silent launcher **(recommended)** | ✅ |
 | `claude_launcher.bat` | Windows batch launcher | ✅ |
 | `claude_launcher.sh` | macOS / Linux shell launcher | ✅ |
@@ -125,5 +130,5 @@ uv run python claude_launcher.py
 1. 📖 On launch, reads `claude_config.json` and renders the project list.
 2. 🚀 Automatically starts `headroom proxy --port <port> --anthropic-api-url <upstream>`.
 3. 🔄 Polls `http://<host>:<port>/stats` every 5 seconds for live metrics.
-4. 🔗 When a project is launched, sets `ANTHROPIC_BASE_URL=http://<host>:<port>` so Claude Code routes through Headroom → ccswitch.
+4. 🔗 When a project is launched, Claude Code receives `ANTHROPIC_BASE_URL=http://<host>:<port>` via `--settings` (a runtime JSON written to `claude_start_overwrite_setting.json`) or environment variable, routing through Headroom → ccswitch.
 5. 🧹 On exit, kills all spawned child processes and the Headroom proxy.
