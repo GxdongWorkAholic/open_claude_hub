@@ -75,6 +75,8 @@ class ClaudeLauncher:
         self.headroom_url = f"http://{self.headroom_host}:{self.headroom_port}"
         self.upstream = self.config["headroom"]["upstream"]
         self.projects = self.config["projects"]
+        self.launcher_type = self.config.get("launcher", "windows_terminal")
+        self.launcher_options = self.config.get("launcher_options", ["windows_terminal", "cmd"])
 
         # -- State --
         self.selected: dict[str, tk.BooleanVar] = {}
@@ -168,7 +170,7 @@ class ClaudeLauncher:
 
         # -- Bottom bar --
         footer = tk.Frame(self.root, bg=COLORS["bg"])
-        footer.pack(fill="x", padx=24, pady=(4, 12))
+        footer.pack(fill="x", padx=24, pady=(4, 12), side="bottom")
 
         sep = tk.Frame(footer, bg=COLORS["border"], height=1)
         sep.pack(fill="x", pady=(0, 12))
@@ -177,13 +179,40 @@ class ClaudeLauncher:
         btn_row.pack(fill="x")
 
         self.footer_actions = tk.Frame(btn_row, bg=COLORS["bg"])
-        self.footer_actions.pack(side="left")
+        self.footer_actions.pack(side="right")
 
         self.all_selected = False
         self.toggle_sel_btn = self._make_btn(self.footer_actions, "Select All", self._toggle_select, "text")
         self.toggle_sel_btn.pack(side="left", padx=(0, 12))
         self.launch_btn = self._make_btn(self.footer_actions, "Launch Selected", self.launch, "primary")
         self.launch_btn.pack(side="left")
+
+        # Terminal selector on the left side
+        # self.footer_left = tk.Frame(btn_row, bg=COLORS["bg"])
+        # self.footer_left.pack(side="left")
+
+        # tk.Label(
+        #     self.footer_left, text="Launch with:",
+        #     font=FONTS["body_bold"], bg=COLORS["bg"], fg=COLORS["text"],
+        # ).pack(side="left", padx=(0, 8))
+
+        # self._terminal_type = self.launcher_type  # raw value from config
+        # init_text = self.launcher_type
+
+        # dd_container = tk.Frame(self.footer_left, bg=COLORS["bg"])
+        # dd_container.pack(side="left")
+
+        # self._dd_btn = tk.Label(
+        #     dd_container, text=init_text,
+        #     font=FONTS["body"], bg=COLORS["card"], fg=COLORS["text"],
+        #     padx=12, pady=4,
+        #     cursor="hand2",
+        #     highlightbackground=COLORS["border"], highlightthickness=1,
+        # )
+        # self._dd_btn.pack()
+        # self._dd_btn.bind("<Button-1>", lambda e: self._toggle_dropdown())
+        # self._dd_btn.bind("<Enter>", lambda e: self._dd_btn.configure(bg=COLORS["card_hover"]))
+        # self._dd_btn.bind("<Leave>", lambda e: self._dd_btn.configure(bg=COLORS["card"]))
 
         # Hide footer actions on non-Project tabs
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
@@ -223,13 +252,78 @@ class ClaudeLauncher:
         # Draw cards
         self._build_project_cards()
 
+    def _toggle_dropdown(self):
+        if getattr(self, '_dropdown_open', False):
+            self._close_dropdown()
+            return
+
+        self._dropdown_open = True
+        options = [(opt, opt) for opt in self.launcher_options]
+        self._dropdown_frame = tk.Frame(
+            self.root, bg=COLORS["card"],
+            highlightbackground=COLORS["border"], highlightthickness=1,
+        )
+
+        for text, val in options:
+            opt = tk.Label(
+                self._dropdown_frame, text=text,
+                font=FONTS["body"], bg=COLORS["card"], fg=COLORS["text"],
+                padx=12, pady=4, anchor="w",
+                cursor="hand2",
+            )
+            opt.pack(fill="x")
+            opt.bind("<Button-1>", lambda e, v=val, t=text: self._select_terminal(v, t))
+            opt.bind("<Enter>", lambda e, w=opt: w.configure(bg=COLORS["card_hover"]))
+            opt.bind("<Leave>", lambda e, w=opt: w.configure(bg=COLORS["card"], fg=COLORS["text"]))
+
+        # Position above button after layout computes
+        self._dropdown_frame.update_idletasks()
+        dd_h = self._dropdown_frame.winfo_reqheight()
+        x = self._dd_btn.winfo_rootx() - self.root.winfo_rootx()
+        btn_y = self._dd_btn.winfo_rooty() - self.root.winfo_rooty()
+        y = max(0, btn_y - dd_h - 2)  # 2px gap, clamp at top
+
+        self._dropdown_frame.place(x=x, y=y)
+        self._dropdown_frame.lift()
+
+        # Click outside to close
+        self.root.bind("<Button-1>", self._on_click_outside, add="+")
+
+    def _select_terminal(self, val, text):
+        self._terminal_type = val
+        self._dd_btn.configure(text=text)
+        self._close_dropdown()
+
+    def _close_dropdown(self):
+        self._dropdown_open = False
+        if getattr(self, '_dropdown_frame', None):
+            self._dropdown_frame.place_forget()
+            self._dropdown_frame.destroy()
+            self._dropdown_frame = None
+        self.root.unbind("<Button-1>")
+
     def _on_tab_change(self, event=None):
         """Hide footer action buttons when not on the Projects tab."""
         current_tab = self.notebook.index(self.notebook.select())
         if current_tab == 0:  # Projects tab
-            self.footer_actions.pack(side="left")
+            self.footer_actions.pack(side="right")
+            # self.footer_left.pack(side="left")
         else:  # Headroom tab
             self.footer_actions.pack_forget()
+            # self.footer_left.pack_forget()
+
+    def _on_click_outside(self, event):
+        if getattr(self, '_dropdown_frame', None) and event.widget != self._dd_btn:
+            # Check if click is inside dropdown
+            w = event.widget
+            inside = False
+            while w is not None:
+                if w == self._dropdown_frame:
+                    inside = True
+                    break
+                w = w.master
+            if not inside:
+                self._close_dropdown()
 
     # ================================================================
     #  Tab 2: Headroom Stats
@@ -262,6 +356,8 @@ class ClaudeLauncher:
             scrollregion=self.stats_canvas.bbox("all")))
         self.stats_canvas.bind("<Configure>", lambda e: self.stats_canvas.itemconfig(
             self._stats_canvas_win, width=e.width))
+        self.stats_canvas.bind("<Enter>", lambda _: self._bind_scroll())
+        self.stats_canvas.bind("<Leave>", lambda _: self._unbind_scroll())
 
         # -- Stat cards placeholder --
         # Top summary cards
@@ -584,16 +680,11 @@ class ClaudeLauncher:
             w.destroy()
         self._card_widgets.clear()
 
-        exist_count = 0
-        missing_count = 0
-
         for p in self.projects:
             path_ok = os.path.isdir(p["path"])
             var = tk.BooleanVar(value=path_ok)
             self.selected[p["name"]] = var
             self._create_card(p, path_ok, var)
-
-        pass  # cards built
 
     def _recursive_bind(self, widget, seq, callback):
         widget.bind(seq, callback, add="+")
@@ -691,8 +782,8 @@ class ClaudeLauncher:
             var.set(not var.get())
 
         self._recursive_bind(card, "<Button-1>", toggle)
-        card.bind("<Enter>", _apply_hover, add="+")
-        card.bind("<Leave>", _apply_normal, add="+")
+        self._recursive_bind(card, "<Enter>", _apply_hover)
+        self._recursive_bind(card, "<Leave>", _apply_normal)
 
         var.trace_add("write", lambda *_: _apply_selected() if var.get() else _apply_unselected())
 
@@ -738,7 +829,8 @@ class ClaudeLauncher:
     def start_headroom(self) -> bool:
         try:
             proc = subprocess.Popen(
-                ["headroom", "proxy", "--port", str(self.headroom_port),
+                ["headroom", "proxy", "--host", str(self.headroom_host),
+                 "--port", str(self.headroom_port),
                  "--anthropic-api-url", self.upstream],
                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
             )
@@ -793,29 +885,52 @@ class ClaudeLauncher:
                 "Headroom is not running. Try to start it?",
             ):
                 return
-# status removed
             if not self.start_headroom():
                 return
             self._set_headroom_status(True)
 
+        # Dispatch by selected terminal
+        terminal_val = getattr(self, '_terminal_type', self.launcher_type)
+        tv = terminal_val.lower()
+
+        # Write settings file for headroom URL
+        settings_path = os.path.join(os.path.dirname(__file__), "claude_start_overwrite_setting.json")
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump({"env": {"ANTHROPIC_BASE_URL": self.headroom_url}}, f)
+
+        if tv == "windows_terminal":
+            self._launch_wt(valid, settings_path)
+        else:
+            self._launch_cmd(valid, settings_path)
+
+    # ---- Windows Terminal (wt) ----
+    def _launch_wt(self, valid_projects, settings_path):
+        """Open all projects as tabs in a new Windows Terminal window (--settings approach)."""
+        cmd_args = ["wt"]
+        for i, p in enumerate(valid_projects):
+            if i > 0:
+                cmd_args.append(";")
+            cmd_args += ["nt", "-d", p["path"],
+                         "cmd", "/k", "chcp", "65001", ">nul", "&&", "claude", "--settings", settings_path]
+        proc = subprocess.Popen(cmd_args)
+        self.spawned_processes.append(proc)
+
+    # ---- Cmd ----
+    def _launch_cmd(self, valid_projects, settings_path):
+        """Fallback: open each project in its own cmd window."""
         count = 0
-        for p in valid:
+        for p in valid_projects:
             try:
-                env = os.environ.copy()
-                env["ANTHROPIC_BASE_URL"] = self.headroom_url
                 proc = subprocess.Popen(
-                    ["cmd", "/k", "claude"],
+                    ["cmd", "/k", "chcp", "65001", ">nul", "&&", "claude", "--settings", settings_path],
                     cwd=p["path"],
-                    env=env,
                     creationflags=subprocess.CREATE_NEW_CONSOLE,
                 )
                 self.spawned_processes.append(proc)
                 count += 1
-# status removed
+                time.sleep(0.5)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed: {p['name']}\n{e}")
-
-# status removed
 
     # ================================================================
     #  Selection controls
@@ -828,22 +943,18 @@ class ClaudeLauncher:
             v.set(self.all_selected)
         if self.all_selected:
             self.toggle_sel_btn.configure(text="Deselect All")
-# status removed
         else:
             self.toggle_sel_btn.configure(text="Select All")
-# status removed
 
     def select_all(self):
         for v in self.selected.values():
             v.set(True)
-# status removed
         self.all_selected = True
         self.toggle_sel_btn.configure(text="Deselect All")
 
     def deselect_all(self):
         for v in self.selected.values():
             v.set(False)
-# status removed
         self.all_selected = False
         self.toggle_sel_btn.configure(text="Select All")
 

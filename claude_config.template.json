@@ -1,4 +1,9 @@
 {
+    "launcher": "windows_terminal",
+    "launcher_options": [
+        "windows_terminal",
+        "cmd"
+    ],
     "headroom": {
         "host": "127.0.0.1",
         "port": 8787,
